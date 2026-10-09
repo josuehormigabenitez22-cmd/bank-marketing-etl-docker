@@ -1,0 +1,105 @@
+# Entorno de datos: PostgreSQL + Redis + JupyterLab + pgAdmin (+ servicio opcional "etl")
+services:
+
+  postgres:
+    image: postgres:16.14
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER en .env (copia .env.example a .env)}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB en .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Los scripts de este directorio se ejecutan en orden alfabético, solo la primera vez.
+      - ./init.sql:/docker-entrypoint-initdb.d/01_demo_ventas.sql:ro
+      - ./sql/marketing_schema.sql:/docker-entrypoint-initdb.d/02_marketing_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4.10-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Falta REDIS_PASSWORD en .env}
+    # La contraseña se lee de la variable de entorno del contenedor
+    command: ["sh", "-c", 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      # REDISCLI_AUTH evita pasar la contraseña como argumento de redis-cli
+      test: ["CMD-SHELL", 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  jupyter:
+    build:
+      context: .
+      dockerfile: docker/jupyter/Dockerfile
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      # El código del proyecto se monta de solo lectura para poder hacer `import src` en los notebooks.
+      - ./src:/home/jovyan/src:ro
+      - ./sql:/home/jovyan/sql:ro
+      - ./dataset:/home/jovyan/dataset:ro
+    environment:
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:?Falta JUPYTER_TOKEN en .env}
+      PYTHONPATH: /home/jovyan
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  pgadmin:
+    image: dpage/pgadmin4:9.16
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?Falta PGADMIN_EMAIL en .env}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Falta PGADMIN_PASSWORD en .env}
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Pipeline ETL y tests. No arranca con `docker compose up`; se lanza a demanda:
+  #   docker compose run --rm etl -> ETL completo (bank-full.csv)
+  #   docker compose run --rm etl pytest -> tests (unitarios + integración)
+  etl:
+    profiles: ["etl"]
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    working_dir: /app
+    command: ["python", "-m", "src.etl"]
+    volumes:
+      - .:/app:ro
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redis_data:

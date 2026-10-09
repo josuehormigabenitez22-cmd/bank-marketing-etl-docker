@@ -1,0 +1,22 @@
+# Variables de entorno y claves
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Herramientas
+.pytest_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

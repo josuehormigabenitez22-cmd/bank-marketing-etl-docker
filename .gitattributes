@@ -1,0 +1,6 @@
+# Finales de línea LF en todo el repo (evita que un checkout en Windows deje CRLF en scripts, YAML o .env y rompa los contenedores).
+* text=auto eol=lf
+
+# Datos y binarios: no tocar
+dataset/*.csv -text
+*.png binary
