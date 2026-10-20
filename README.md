@@ -1,6 +1,6 @@
 # Entorno de datos reproducible con Docker: ETL + PostgreSQL + Redis + Jupyter
 
-[![CI](https://github.com/josuehormigabenitez22-cmd/proyecto-docker-database/actions/workflows/ci.yml/badge.svg)](https://github.com/josuehormigabenitez22-cmd/proyecto-docker-database/actions/workflows/ci.yml)
+[![CI](https://github.com/josuehormigabenitez22-cmd/bank-marketing-etl-docker/actions/workflows/ci.yml/badge.svg)](https://github.com/josuehormigabenitez22-cmd/bank-marketing-etl-docker/actions/workflows/ci.yml)
 
 Entorno local de ingeniería y análisis de datos que se levanta con un solo comando (PostgreSQL, Redis, JupyterLab y pgAdmin con Docker Compose) y que incluye un **pipeline ETL en Python** que carga un dataset real de 45.211 registros, una caché de consultas en Redis y notebooks de análisis con gráficos.
 
@@ -53,7 +53,7 @@ flowchart LR
 ## Estructura
 
 ```
-proyecto-docker-database/
+bank-marketing-etl-docker/
 ├── docker-compose.yml          # 4 servicios + etl (perfil opcional)
 ├── docker/
 │   ├── jupyter/Dockerfile      # Jupyter + psycopg2 + redis (versiones de requirements.txt)
@@ -90,8 +90,8 @@ proyecto-docker-database/
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/josuehormigabenitez22-cmd/proyecto-docker-database.git
-cd proyecto-docker-database
+git clone https://github.com/josuehormigabenitez22-cmd/bank-marketing-etl-docker.git
+cd bank-marketing-etl-docker
 
 # 2. Crear el archivo de configuración y editar las contraseñas
 cp .env.example .env
